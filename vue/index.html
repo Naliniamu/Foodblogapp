@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html language='en'>
+
+<head>
+  <title>My first Vue app</title>
+  <!-- using cdn -->
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+  <script src="https://unpkg.com/vue-router@2.0.0"></script>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" />
+  <style>
+    .section {
+      margin-top: 2em;
+    }
+  </style>
+  <style>
+    .section {
+      margin-top: 2em;
+    }
+
+    #app {
+      font-family: 'timesnewroman';
+      text-align: center;
+      color: #2c3e50;
+      margin-top: 60px;
+    }
+
+    #comments {
+      font-family: 'timesnewroman';
+      text-align: left;
+      color: #2c3e50;
+      margin-top: 10px;
+    }
+
+    #pcomment {
+      font-family: 'timesnewroman';
+      text-align: left;
+      color: #2c3e50;
+      margin-top: 10px;
+    }
+
+    #replydiv {
+      font-family: 'timesnewroman';
+      text-align: left;
+      color: #2c3e50;
+      margin-top: 6px;
+      margin-left: 60px;
+    }
+
+    #subcomment {
+      display: flex;
+      font-family: 'timesnewroman';
+      text-align: left;
+      color: #2c3e50;
+      margin-top: 6px;
+      margin-left: 60px;
+    }
+
+    #pcontent {
+      display: flex;
+      font-family: 'timesnewroman';
+      text-align: left;
+      color: #2c3e50;
+    }
+  </style>
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <div class='blog container'>
+      <h2>{{title}}</h2>
+      <hr>
+      <div class="row">
+        <div v-for="post in posts">
+          <div class="thumbnail">
+            <img src="./assets/foodblog1.jpg">
+            <div class="caption">
+              <h3>{{post.title}}</h3>
+              <p>{{post.body}}</p>
+              <div>
+                <!-- post commnets -->
+                <div class="form-group" id="comments">
+                  <label for="body">Comments:</label>
+                  <textarea class="form-control" rows="4" id="conbody" v-model="newcom"></textarea>
+                  <p> <a href="#" class="btn btn-primary" role="button" v-on:click="Comments(post)">Post</a></p>
+                </div>
+                <!-- previous commnets -->
+                <div id="pcomment">
+                  <label for="body">Preveious Comments:</label>
+                  <div v-for="(content,index) in contentarray" @click="focus(content.msgid +'ta'+index)"
+                    :key="content.msgid">
+                    <div id="pcontent">
+                      <img id="userimage" width="50px" src="./assets/userimage.png">
+                      <textarea class="form-control" rows="1" disabled="true">{{ content.msgcontent }}</textarea>
+                    </div>
+                    <div id="subcomment" v-for="subcommsg in fetchcommentssub(content.msgid)" :key="subcommsg.msgcomid">
+                      <img id="userimage" width="50px" src="./assets/userimage.png"> <textarea class="form-control"
+                        rows="1" disabled="true">{{subcommsg.msgcom }}</textarea>
+                    </div>
+                    <!-- reply for comments -->
+                    <div id="replydiv">
+                      <textarea class="form-control" rows="2" :ref="content.msgid +'ta'+index"
+                        :id="content.msgid +'ta'+index"></textarea>
+                      <p> <a href="#" id="replycomments" class="btn btn-primary" role="button"
+                          v-on:click="subcomments(this,content.msgid +'ta'+index)">Reply</a></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+ 
+  <script>
+    var app = new Vue({
+      el: '#app',
+      data() {
+        return {
+          title: 'Food Blog App',
+          posts: [{
+            'title': '9 Best Street Foods In Salem That Stun Your Taste Buds',
+            'body': 'Salem, the smart city is smart enough in delivering mouth-watering foods apart from its popularity in steel production and mango imports. Salem houses have a large number of restaurants to serve high-quality vegetarian and non-vegetarian foods but the street foods are in no way lesser in melting your tastebuds. “Salem is always special for street foods where common dishes too served yummily”. Here are some of the best street foods in Salem.'
+          }],
+          contentarray: [],
+          commentsarray: [],
+          newcom: "",
+        }
+      },
+      mounted() {
+        this.Fetchcontent()
+      },
+      methods: {
+        fetchcommentssub(val) {
+          return this.commentsarray.filter(code => code.msgid == val)
+        },
+        focus(key) {
+          document.getElementById(key).focus();
+          this.$refs[key][0].focus()
+        },
+        Comments() {
+         if (this.newcom != "")
+          this.Insertcontent()
+          else
+          window.alert("please enter valid comments")
+          
+        },
+        subcomments(e, reply) {
+          if (document.getElementById(reply).value != "" )
+          this.Insertcomments(reply, e.scrollY)
+          else
+          window.alert("please enter valid comments")
+         
+
+        },
+        async Fetchcontent() {
+          const response = await fetch('http://localhost:8080/fetchmessagecontents', {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+          const myJson = await response.json();
+          this.contentarray = myJson[0]
+          this.commentsarray = myJson[1]
+        },
+        async Insertcontent() {
+          const response = await fetch('http://localhost:8080/insertmessagecontents', {
+            method: 'post',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+            ,
+            body: JSON.stringify({ msg: this.newcom, datetime: new Date() })
+          });
+          const myJson = await response.json();
+          var json = myJson
+          var newmsgid = json[0].msgid
+          this.contentarray.push({ msgcontent: this.newcom, msgid: newmsgid });
+          this.newcom = '';
+          setTimeout(() => window.scrollTo(0, document.body.scrollHeight + 100), 100);
+        },
+        async Insertcomments(reply, elementHeight) {
+          var msgid = reply.split('ta')[0]
+          var msgcom = document.getElementById(reply).value
+          const response = await fetch('http://localhost:8080/insertmessagecomments', {
+            method: 'post',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+            ,
+            body: JSON.stringify({ msg: msgcom, msgid: msgid, datetime: new Date() })
+          });
+          const myJson = await response.json();
+          var json = myJson
+          var newmsgid = json[0].msgcomid
+          this.commentsarray.push({ msgcom: msgcom, msgid: msgid, msgcomid: newmsgid });
+          document.getElementById(reply).value = " "
+          window.scrollTo(0, elementHeight + 100)
+
+        },
+
+      }
+    })
+  </script>
+</body>
+
+</html>
